@@ -1,4 +1,5 @@
 import pickle
+import time
 
 import numpy as np
 import pandas as pd
@@ -13,17 +14,18 @@ from sklearn.svm import LinearSVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from umap import UMAP
 
 # Prepare SKLearn Models
 MAX_ITER = 100
 models = [
-    ('LR', LogisticRegression(solver='sag', max_iter=MAX_ITER, verbose=1)),
+    ('LR', LogisticRegression(solver='sag', max_iter=MAX_ITER)),
     ('SVM', LinearSVC(penalty='l2', loss='hinge', max_iter=MAX_ITER)),
     ('CART', DecisionTreeClassifier(splitter='random')),
-    ('MLP5', MLPClassifier((5,), solver='adam', max_iter=MAX_ITER, shuffle=True, verbose=True, early_stopping=True)),
-    ('MLP10', MLPClassifier((10,), solver='adam', max_iter=MAX_ITER, shuffle=True, verbose=True, early_stopping=True)),
-    ('MLP40', MLPClassifier((40,), solver='adam', max_iter=MAX_ITER, shuffle=True, verbose=True, early_stopping=True)),
-    ('MLP100', MLPClassifier((100,), solver='adam', max_iter=MAX_ITER, shuffle=True, verbose=True, early_stopping=True))
+    ('MLP5', MLPClassifier((5,), solver='adam', max_iter=MAX_ITER, shuffle=True, early_stopping=True)),
+    ('MLP10', MLPClassifier((10,), solver='adam', max_iter=MAX_ITER, shuffle=True, early_stopping=True)),
+    ('MLP40', MLPClassifier((40,), solver='adam', max_iter=MAX_ITER, shuffle=True, early_stopping=True)),
+    ('MLP100', MLPClassifier((100,), solver='adam', max_iter=MAX_ITER, shuffle=True, early_stopping=True))
 ]
 
 # Cross validation method
@@ -41,35 +43,35 @@ def evaluate(_classification, _compression, _features, _labels):
         )
     for name, model in models:
         print(_classification, ", Compression : ", _compression, ", Algorithm : ", name, sep='')
-        if len(metrics[_classification][_compression][name]['accuracy']):
+        if len(metrics[_classification][name][_compression]['accuracy']):
             print("Skip ... data already available")
         else:
             print("Work in progress ... ", end='')
             results = model_selection.cross_validate(model, _features, _labels, cv=kfold, scoring=scoring)
-            metrics[_classification][_compression][name]['fit_time'] = results['fit_time']
-            metrics[_classification][_compression][name]['prediction_time'] = results['score_time']
-            metrics[_classification][_compression][name]['accuracy'] = results['test_accuracy']
+            metrics[_classification][name][_compression]['fit_time'] = results['fit_time']
+            metrics[_classification][name][_compression]['prediction_time'] = results['score_time']
+            metrics[_classification][name][_compression]['accuracy'] = results['test_accuracy']
             if _classification == 'binary':
-                metrics[_classification][_compression][name]['precision'] = results['test_precision']
-                metrics[_classification][_compression][name]['recall'] = results['test_recall']
-                metrics[_classification][_compression][name]['f1'] = results['test_f1']
+                metrics[_classification][name][_compression]['precision'] = results['test_precision']
+                metrics[_classification][name][_compression]['recall'] = results['test_recall']
+                metrics[_classification][name][_compression]['f1'] = results['test_f1']
             else:
-                metrics[_classification][_compression][name]['precision']['micro'] = results['test_precision_micro']
-                metrics[_classification][_compression][name]['precision']['macro'] = results['test_precision_macro']
-                metrics[_classification][_compression][name]['precision']['weighted'] = results['test_precision_weighted']
-                metrics[_classification][_compression][name]['recall']['micro'] = results['test_recall_micro']
-                metrics[_classification][_compression][name]['recall']['macro'] = results['test_recall_macro']
-                metrics[_classification][_compression][name]['recall']['weighted'] = results['test_recall_weighted']
-                metrics[_classification][_compression][name]['f1']['micro'] = results['test_f1_micro']
-                metrics[_classification][_compression][name]['f1']['macro'] = results['test_f1_macro']
-                metrics[_classification][_compression][name]['f1']['weighted'] = results['test_f1_weighted']
+                metrics[_classification][name][_compression]['precision']['micro'] = results['test_precision_micro']
+                metrics[_classification][name][_compression]['precision']['macro'] = results['test_precision_macro']
+                metrics[_classification][name][_compression]['precision']['weighted'] = results['test_precision_weighted']
+                metrics[_classification][name][_compression]['recall']['micro'] = results['test_recall_micro']
+                metrics[_classification][name][_compression]['recall']['macro'] = results['test_recall_macro']
+                metrics[_classification][name][_compression]['recall']['weighted'] = results['test_recall_weighted']
+                metrics[_classification][name][_compression]['f1']['micro'] = results['test_f1_micro']
+                metrics[_classification][name][_compression]['f1']['macro'] = results['test_f1_macro']
+                metrics[_classification][name][_compression]['f1']['weighted'] = results['test_f1_weighted']
             print("Done")
             writefile = open("data/results.dat", "wb")
             pickle.dump(metrics, writefile)
             writefile.close()
-        accuracy = round(metrics[_classification][_compression][name]['accuracy'].mean() * 100, 2)
-        fit = round(metrics[_classification][_compression][name]['fit_time'].min() * 1000)
-        predict = round(metrics[_classification][_compression][name]['prediction_time'].min() * 1000)
+        accuracy = round(metrics[_classification][name][_compression]['accuracy'].mean() * 100, 2)
+        fit = round(metrics[_classification][name][_compression]['fit_time'].min() * 1000)
+        predict = round(metrics[_classification][name][_compression]['prediction_time'].min() * 1000)
         print("Accuracy = ", accuracy, "%", sep='')
         print("Fit time = ", fit, "ms", sep='')
         print("Predict time = ", predict, "ms", sep='')
@@ -91,7 +93,7 @@ if __name__ == '__main__':
         dataframe = pd.read_csv('./data/dataset.csv')
         print("Done")
 
-        print("Convert IP adresses and dates to numerical data ... ", end='')
+        print("Convert IP addresses and dates to numerical data ... ", end='')
 
         # Convert IP adresses to 32-bits integers
         dataframe['Src_IP'] = dataframe['Src_IP'].apply(
@@ -151,6 +153,61 @@ if __name__ == '__main__':
     category_y = np_dataset[:, -2]
     subcategory_y = np_dataset[:, -1]
 
+    # If the UMAP data for 3 dimensions is already available then read it
+    if os.path.isfile("data/umap3.npy"):
+        print("UMAP data for 3 dimensions already available")
+        print("Read UMAP data for 3 dimensions ... ", end='')
+        umap3_features = np.load("data/umap3.npy", allow_pickle=True)
+        print("Done")
+
+    else:
+        # Dimension reduction to 3 dimensions using UMAP
+        print("Applying UMAP (3 dimensions) to preprocessed data ... ", end='')
+        # Random state argument is used for reproducibility
+        ump = UMAP(n_components=3, n_jobs=4, init="random", random_state=42, min_dist=0)
+        ump.fit(features)
+        umap3_features = ump.transform(features)
+        print("Done")
+        print("Storing the UMAP data (3 dimensions) in a file ... ", end='')
+        np.save("data/umap3", umap3_features)
+        print("Done")
+
+    # If the UMAP data for 6 dimensions is already available then read it
+    if os.path.isfile("data/umap6.npy"):
+        print("UMAP data for 6 dimensions already available")
+        print("Read UMAP data for 6 dimensions ... ", end='')
+        umap6_features = np.load("data/umap6.npy", allow_pickle=True)
+        print("Done")
+
+    else:
+        # Dimension reduction to 6 dimensions using UMAP
+        print("Applying UMAP (6 dimensions) to preprocessed data ... ", end='')
+        ump = UMAP(n_components=6, n_jobs=4, init="random", random_state=42, min_dist=0)
+        ump.fit(features)
+        umap6_features = ump.transform(features)
+        print("Done")
+        print("Storing the UMAP data (6 dimensions) in a file ... ", end='')
+        np.save("data/umap6", umap6_features)
+        print("Done")
+
+    # If the UMAP data for 8 dimensions is already available then read it
+    if os.path.isfile("data/umap8.npy"):
+        print("UMAP data for 8 dimensions already available")
+        print("Read UMAP data for 8 dimensions ... ", end='')
+        umap8_features = np.load("data/umap8.npy", allow_pickle=True)
+        print("Done")
+
+    else:
+        # Dimension reduction to 8 dimensions using UMAP
+        print("Applying UMAP (8 dimensions) to preprocessed data ... ", end='')
+        ump = UMAP(n_components=8, n_jobs=4, init="random", random_state=42, min_dist=0)
+        ump.fit(features)
+        umap8_features = ump.transform(features)
+        print("Done")
+        print("Storing the UMAP data (8 dimensions) in a file ... ", end='')
+        np.save("data/umap8", umap8_features)
+        print("Done")
+
     # If the PCA data is already available then read it
     if os.path.isfile("data/pca.npy"):
         print("PCA data already available")
@@ -205,7 +262,8 @@ if __name__ == '__main__':
             for algorithm in metrics[classification]:
                 metrics[classification][algorithm] = {'original': dict(),
                                                       'pca3': dict(), 'pca6': dict(), 'pca8': dict(),
-                                                      'lda3': dict(), 'lda6': dict(), 'lda8': dict()}
+                                                      'lda3': dict(), 'lda6': dict(), 'lda8': dict(),
+                                                      'umap3': dict(), 'umap6': dict(), 'umap8': dict()}
                 for compression in metrics[classification][algorithm]:
                     if classification == 'binary':
                         metrics[classification][algorithm][compression] =\
@@ -222,8 +280,6 @@ if __name__ == '__main__':
                             {'micro': [], 'macro': [], 'weighted': []}
         print("Done")
 
-    exit(0)
-
     # Cross validation for the different tests
     # binary classification with no dimensionality reduction
     evaluate('binary', 'original', features, binary_y)
@@ -231,27 +287,39 @@ if __name__ == '__main__':
     evaluate('category', 'original', features, category_y)
     # subcategory classification with no dimensionality reduction
     evaluate('subcategory', 'original', features, subcategory_y)
-    # binary classification with pca
+    # binary classification with UMAP
+    evaluate('binary', 'umap3', umap3_features, binary_y)
+    evaluate('binary', 'umap6', umap6_features, binary_y)
+    evaluate('binary', 'umap8', umap8_features, binary_y)
+    # category classification with UMAP
+    evaluate('category', 'umap3', umap3_features, category_y)
+    evaluate('category', 'umap6', umap6_features, category_y)
+    evaluate('category', 'umap8', umap8_features, category_y)
+    # subcategory classification with UMAP
+    evaluate('subcategory', 'umap3', umap3_features, subcategory_y)
+    evaluate('subcategory', 'umap6', umap6_features, subcategory_y)
+    evaluate('subcategory', 'umap8', umap8_features, subcategory_y)
+    # binary classification with PCA
     evaluate('binary', 'pca3', pca_features[:, :3], binary_y)
     evaluate('binary', 'pca6', pca_features[:, :6], binary_y)
     evaluate('binary', 'pca8', pca_features[:, :8], binary_y)
-    # category classification with pca
+    # category classification with PCA
     evaluate('category', 'pca3', pca_features[:, :3], category_y)
     evaluate('category', 'pca6', pca_features[:, :6], category_y)
     evaluate('category', 'pca8', pca_features[:, :8], category_y)
-    # subcategory classification with pca
+    # subcategory classification with PCA
     evaluate('subcategory', 'pca3', pca_features[:, :3], subcategory_y)
     evaluate('subcategory', 'pca6', pca_features[:, :6], subcategory_y)
     evaluate('subcategory', 'pca8', pca_features[:, :8], subcategory_y)
-    # binary classification with lda
+    # binary classification with LDA
     evaluate('binary', 'lda3', lda_features[:, :3], binary_y)
     evaluate('binary', 'lda6', lda_features[:, :6], binary_y)
     evaluate('binary', 'lda8', lda_features[:, :8], binary_y)
-    # category classification with lda
+    # category classification with LDA
     evaluate('category', 'lda3', lda_features[:, :3], category_y)
     evaluate('category', 'lda6', lda_features[:, :6], category_y)
     evaluate('category', 'lda8', lda_features[:, :8], category_y)
-    # subcategory classification with lda
+    # subcategory classification with LDA
     evaluate('subcategory', 'lda3', lda_features[:, :3], subcategory_y)
     evaluate('subcategory', 'lda6', lda_features[:, :6], subcategory_y)
     evaluate('subcategory', 'lda8', lda_features[:, :8], subcategory_y)
