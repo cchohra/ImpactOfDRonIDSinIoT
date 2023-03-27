@@ -2,7 +2,9 @@ import pickle
 
 import numpy as np
 import pandas as pd
-import os.path
+import os
+import socket
+import struct
 
 from sklearn import model_selection
 from sklearn.linear_model import LogisticRegression
@@ -10,11 +12,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import LinearSVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
-import socket
-import struct
 
 # Prepare SKLearn Models
 MAX_ITER = 100
@@ -153,49 +151,61 @@ if __name__ == '__main__':
     category_y = np_dataset[:, -2]
     subcategory_y = np_dataset[:, -1]
 
-    # If the pca data is already available then read it
+    # If the PCA data is already available then read it
     if os.path.isfile("data/pca.npy"):
         print("PCA data already available")
         print("Read PCA data ... ", end='')
         pca_features = np.load("data/pca.npy", allow_pickle=True)
         print("Done")
 
-    # Dimension reduction using pca
+    # Dimension reduction using PCA
     else:
         print("Applying PCA to preprocessed data ... ", end='')
         pca = PCA()
         pca.fit(features)
         pca_features = pca.transform(features)
         print("Done")
-        print("Storing the pca data in a file ... ", end='')
+        print("Storing the PCA data in a file ... ", end='')
         np.save("data/pca", pca_features)
         print("Done")
 
-    # Dimension reduction using t-sne
-    print("Applying t-SNE to preprocessed data ... ", end='')
-    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
-    tsne.fit(features)
-    tsne_features = tsne.transform(features)
-    print("Done")
+    # If the LDA data is already available then read it
+    if os.path.isfile("data/lda.npy"):
+        print("LDA data already available")
+        print("Read LDA data ... ", end='')
+        lda_features = np.load("data/lda.npy", allow_pickle=True)
+        print("Done")
 
     # Dimension reduction using LDA
-    print("Applying LDA to preprocessed data ... ", end='')
-    lda = LinearDiscriminantAnalysis(n_components=2)
-    lda.fit(features, subcategory_y)
-    lda_features = lda.transform(features)
-    print("Done")
-
+    else:
+        print("Applying LDA to preprocessed data ... ", end='')
+        lda = LinearDiscriminantAnalysis()
+        lda.fit(features, subcategory_y)
+        lda_features = lda.transform(features)
+        print("Done")
+        print("Storing the LDA data in a file ... ", end='')
+        np.save("data/lda", lda_features)
+        print("Done")
 
     # Prepare a dictionary for metrics
-    if not os.path.isfile("data/results.dat"):
+    if os.path.isfile("data/results.dat"):
+        print("Result data already exist")
+        print("Read old results ... ", end='')
+        readfile = open("data/results.dat", "rb")
+        metrics = pickle.load(readfile)
+        readfile.close()
+        print("Done")
+
+    else:
         print("Prepare results dictionary ...", end='')
         metrics = {'binary': dict(), 'category': dict(), 'subcategory': dict()}
         for classification in metrics:
             metrics[classification] = {'LR': dict(), 'CART': dict(), 'SVM': dict(),
-                               'MLP5': dict(), 'MLP10': dict(), 'MLP40': dict(), 'MLP100': dict()}
+                                       'MLP5': dict(), 'MLP10': dict(), 'MLP40': dict(), 'MLP100': dict()}
             for algorithm in metrics[classification]:
                 metrics[classification][algorithm] = {'original': dict(),
-                                                      'pca4': dict(), 'pca8': dict(), 'pca16': dict()}
+                                                      'pca3': dict(), 'pca6': dict(), 'pca8': dict(),
+                                                      'lda3': dict(), 'lda6': dict(), 'lda8': dict()}
                 for compression in metrics[classification][algorithm]:
                     if classification == 'binary':
                         metrics[classification][algorithm][compression] =\
@@ -212,13 +222,6 @@ if __name__ == '__main__':
                             {'micro': [], 'macro': [], 'weighted': []}
         print("Done")
 
-    else:
-        print("Result data already exist")
-        print("Read old results ... ", end='')
-        readfile = open("data/results.dat", "rb")
-        metrics = pickle.load(readfile)
-        readfile.close()
-        print("Done")
     exit(0)
 
     # Cross validation for the different tests
@@ -229,14 +232,26 @@ if __name__ == '__main__':
     # subcategory classification with no dimensionality reduction
     evaluate('subcategory', 'original', features, subcategory_y)
     # binary classification with pca
-    evaluate('binary', 'pca4', pca_features, binary_y)
-    evaluate('binary', 'pca6', pca_features, binary_y)
-    evaluate('binary', 'pca10', pca_features, binary_y)
+    evaluate('binary', 'pca3', pca_features[:, :3], binary_y)
+    evaluate('binary', 'pca6', pca_features[:, :6], binary_y)
+    evaluate('binary', 'pca8', pca_features[:, :8], binary_y)
     # category classification with pca
-    evaluate('category', 'pca4', pca_features, category_y)
-    evaluate('category', 'pca6', pca_features, category_y)
-    evaluate('category', 'pca10', pca_features, category_y)
+    evaluate('category', 'pca3', pca_features[:, :3], category_y)
+    evaluate('category', 'pca6', pca_features[:, :6], category_y)
+    evaluate('category', 'pca8', pca_features[:, :8], category_y)
     # subcategory classification with pca
-    evaluate('subcategory', 'pca4', pca_features, subcategory_y)
-    evaluate('subcategory', 'pca6', pca_features, subcategory_y)
-    evaluate('subcategory', 'pca10', pca_features, subcategory_y)
+    evaluate('subcategory', 'pca3', pca_features[:, :3], subcategory_y)
+    evaluate('subcategory', 'pca6', pca_features[:, :6], subcategory_y)
+    evaluate('subcategory', 'pca8', pca_features[:, :8], subcategory_y)
+    # binary classification with lda
+    evaluate('binary', 'lda3', lda_features[:, :3], binary_y)
+    evaluate('binary', 'lda6', lda_features[:, :6], binary_y)
+    evaluate('binary', 'lda8', lda_features[:, :8], binary_y)
+    # category classification with lda
+    evaluate('category', 'lda3', lda_features[:, :3], category_y)
+    evaluate('category', 'lda6', lda_features[:, :6], category_y)
+    evaluate('category', 'lda8', lda_features[:, :8], category_y)
+    # subcategory classification with lda
+    evaluate('subcategory', 'lda3', lda_features[:, :3], subcategory_y)
+    evaluate('subcategory', 'lda6', lda_features[:, :6], subcategory_y)
+    evaluate('subcategory', 'lda8', lda_features[:, :8], subcategory_y)
