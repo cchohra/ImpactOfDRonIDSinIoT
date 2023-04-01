@@ -47,7 +47,7 @@ def plot_data(data, xlabel, ylabel, xlabels, legends, title, target_file, displa
                          fontweight="bold", color=colors[i])
             else:
                 label = "{:.0f}".format(averages[i, j])
-                yposition = averages[i, j] + stds[i, j] + (averages.max() + stds.max()) * 0.01
+                yposition = averages[i, j] + stds[i, j] + (averages.max(initial=0) + stds.max(initial=0)) * 0.01
                 plt.text(x=j + i * bar_width - 0.04, y=yposition, s=label, fontsize=10,
                          fontweight="bold", color=colors[i])
 
@@ -57,7 +57,7 @@ def plot_data(data, xlabel, ylabel, xlabels, legends, title, target_file, displa
     if percentage:
         plt.axis([-bar_width, averages.shape[1] - bar_width, 0, 120])
     else:
-        plt.axis([-bar_width, averages.shape[1] - bar_width, 0, (averages.max() + stds.max()) * 1.2])
+        plt.axis([-bar_width, averages.shape[1] - bar_width, 0, (averages.max(initial=0) + stds.max(initial=0)) * 1.2])
     plt.xticks([r + (averages.shape[0] - 1) * 0.5 * bar_width for r in range(averages.shape[1])], xlabels)
     plt.title(title, fontsize=16, fontweight="bold")
 
@@ -85,5 +85,5 @@ def plot_data(data, xlabel, ylabel, xlabels, legends, title, target_file, displa
 
 
 # Set the default font family to Times New Roman
-plt.rcParams['font.family'] = 'serif'
-plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = ["Times New Roman"] + plt.rcParams["font.serif"]
