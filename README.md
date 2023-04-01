@@ -13,6 +13,7 @@ The following dependencies are required to run the program:
 - umap-learn 0.5.3.
 - Matplotlib 3.7.1.
 - numpyencoder 0.3.0.
+
 Please note that our tests were performed using the above versions of the dependencies (also set in the file `requirements.txt`). However, the program should work with other versions of the dependencies as well.
 
 # Installation
