@@ -128,10 +128,14 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# ignore all csv, npy and dat files
-*.csv
-*.npy
-*.dat
-
 # ignore pycharm files
 .idea/
+
+# ignore all files in the data folder
+data/
+
+# ignore all files in the figures folder
+figures/
+
+# ignore all files in the results folder
+results/
