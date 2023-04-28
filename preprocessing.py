@@ -15,7 +15,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 def preprocess(source_file, target_file):
 
     # If the preprocessed data is available, read it
-    if os.path.isfile(target_file + ".npy"):
+    if not os.path.isfile(target_file + ".npy"):
         print("Preprocessed data already available")
         print("Read the preprocessed data ... ", end="")
         preprocessed_data = np.load(target_file + ".npy", allow_pickle=True)
@@ -50,19 +50,27 @@ def preprocess(source_file, target_file):
         # Keep only numerical data
         dataframe = dataframe.select_dtypes(["number"])
 
-        # Normalize the data
-        print("Normalize Numerical Data ... ", end="")
+        # Replace infinities by column max (and min) depending on the sign
+        print("Replace infinities by column max ... ", end="")
+        dataframe = dataframe.replace(np.inf, np.nan)
+        dataframe = dataframe.fillna(dataframe.max())
+        dataframe = dataframe.replace(-np.inf, np.nan)
+        dataframe = dataframe.fillna(dataframe.min())
+        print("Done")
+
+        # Scale the data
+        print("Scale the data ... ", end="")
         dataframe = (dataframe.max() - dataframe) / (dataframe.max() - dataframe.min())
         print("Done")
 
-        # Remove columns with NaN values
+        # Remove columns with all NaN values
         print("Remove columns with NaN values ... ", end="")
         null_cols = dataframe.columns[dataframe.isnull().all()].tolist()
         dataframe = dataframe.drop(null_cols, axis=1)
         print("Done")
 
-        # Transform class names into numbers
-        print("Managing labels ... ", end="")
+        # One-hot encode for the labels
+        print("One-hot encoding the labels ... ", end="")
         binary_y = binary_labels.replace({"Normal": 0, "Anomaly": 1}).to_numpy(copy=True)
         category_y = category_labels.replace({"Normal": 0, "Mirai": 1, "DoS": 2, "Scan": 3,
                                               "MITM ARP Spoofing": 4}).to_numpy(copy=True)
@@ -75,7 +83,7 @@ def preprocess(source_file, target_file):
         dataframe["Sub_Cat"] = subcategory_y
         print("Done")
 
-        # Store the normalized data in a file
+        # Store the scaled data in a file
         print("Store the preprocessed data ... ", end="")
         preprocessed_data = dataframe.to_numpy()
         np.save(target_file, preprocessed_data)
