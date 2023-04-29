@@ -15,7 +15,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 def preprocess(source_file, target_file):
 
     # If the preprocessed data is available, read it
-    if not os.path.isfile(target_file + ".npy"):
+    if os.path.isfile(target_file + ".npy"):
         print("Preprocessed data already available")
         print("Read the preprocessed data ... ", end="")
         preprocessed_data = np.load(target_file + ".npy", allow_pickle=True)
