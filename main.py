@@ -396,8 +396,6 @@ if __name__ == "__main__":
     jsonfile.close()
     print("Done")
 
-    exit(0)
-
     # Generate figures to compare the accuracy of the tested algorithms
     print("Generate figures for algorithms' accuracy comparison ...", end="")
     compared_algorithms = ["CART", "MLP40", "SVM", "LR"]
