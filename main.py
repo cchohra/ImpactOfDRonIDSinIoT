@@ -274,6 +274,11 @@ def evaluate(_classification, _reducer, _features, _labels):
                 metrics[_classification][name][_reducer]["f1"]["macro"] = results["test_f1_macro"]
                 metrics[_classification][name][_reducer]["f1"]["weighted"] = results["test_f1_weighted"]
             print("Done")
+
+            # If there is no directory for the results, then create it
+            if not os.path.isdir("results"):
+                os.mkdir("results")
+
             writefile = open("results/metrics.pkl", "wb")
             pickle.dump(metrics, writefile)
             writefile.close()
@@ -395,6 +400,10 @@ if __name__ == "__main__":
     json.dump(metrics, jsonfile, indent=4, cls=NumpyEncoder)
     jsonfile.close()
     print("Done")
+
+    # If there is no figure directory, then create it
+    if not os.path.isdir("./figures"):
+        os.mkdir("./figures")
 
     # Generate figures to compare the accuracy of the tested algorithms
     print("Generate figures for algorithms' accuracy comparison ...", end="")
