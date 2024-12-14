@@ -25,8 +25,9 @@ def preprocess(source_file, target_file):
         # Read the csv file into a dataframe
         print("Loading the dataset ... ", end="")
         dataframe = pd.read_csv(source_file)
+
         # Keep the first 10000 rows for testing
-        dataframe = dataframe.head(10000)
+        # dataframe = dataframe.head(10000)
         print("Done")
 
         print("Convert IP addresses and dates to numerical data ... ", end="")

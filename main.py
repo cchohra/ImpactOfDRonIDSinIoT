@@ -283,11 +283,13 @@ def evaluate(_classification, _reducer, _features, _labels):
             pickle.dump(metrics, writefile)
             writefile.close()
         accuracy = round(metrics[_classification][name][_reducer]["accuracy"].mean() * 100, 2)
-        fit = round(metrics[_classification][name][_reducer]["fit_time"].min() * 1000)
-        predict = round(metrics[_classification][name][_reducer]["prediction_time"].min() * 1000)
+        fit_avg = round(metrics[_classification][name][_reducer]["fit_time"].mean() * 1000)
+        fit_std = round(metrics[_classification][name][_reducer]["fit_time"].std() * 1000)
+        predict_avg = round(metrics[_classification][name][_reducer]["prediction_time"].mean() * 1000)
+        predict_std = round(metrics[_classification][name][_reducer]["prediction_time"].std() * 1000)
         print("Accuracy = ", accuracy, "%", sep="")
-        print("Fit time = ", fit, "ms", sep="")
-        print("Predict time = ", predict, "ms", sep="")
+        print("Fit time = ", fit_avg, "ms ±", fit_std, sep="")
+        print("Predict time = ", predict_avg, "ms ±", predict_std, sep="")
 
 
 # Main program
@@ -352,6 +354,7 @@ if __name__ == "__main__":
 
     # Cross validation for the different tests
     # binary classification with no dimensionality reduction
+    evaluate("binary", "original", features, binary_y)
     evaluate("binary", "original", features, binary_y)
     # category classification with no dimensionality reduction
     evaluate("category", "original", features, category_y)
