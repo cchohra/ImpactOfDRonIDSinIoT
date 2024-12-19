@@ -14,7 +14,8 @@ from sklearn.tree import DecisionTreeClassifier
 
 def plot_explained_variance_ratio(explained_variance, target_file):
     plt.figure(figsize=(16, 9), dpi=120)
-    plt.plot(np.cumsum(explained_variance) * 100)
+    plt.plot(np.cumsum(explained_variance) * 100, marker="o", color="b", linestyle="-", linewidth=2)
+    plt.ylim(0, 105)
     plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter())
     plt.grid(True)
     plt.tick_params(axis="both", which="major", labelsize=22)
@@ -32,10 +33,29 @@ def draw_pie_chart(slices, target_file):
     plt.savefig(target_file + ".jpg", format="jpg", dpi=120)
 
 
+def generate_confusion_matrix(x, y, target_file):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+    cart = DecisionTreeClassifier(splitter="random")
+    cart.fit(x_train, y_train)
+    y_pred = cart.predict(x_test)
+    mat = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(16, 9), dpi=120)
+    plt.matshow(mat, cmap='Greys', vmin=0, vmax=30000)
+    plt.colorbar()
+    plt.savefig(target_file + ".pdf", format="pdf", dpi=120)
+    plt.savefig(target_file + ".jpg", format="jpg", dpi=120)
+
+
 if __name__ == "__main__":
 
     # Load the preprocessed data
     preprocessed_data = np.load("data/preprocessed_data.npy", allow_pickle=True)
+
+    # Which subcategories belong to each category
+    categories = np.unique(preprocessed_data[:, -2])
+    for category in categories:
+        subcategories = np.unique(preprocessed_data[preprocessed_data[:, -2] == category, -1])
+        print("Category: ", category, " Subcategories: ", subcategories)
 
     # Extract the preprocessed data
     X = preprocessed_data[:, :-3]
@@ -49,7 +69,7 @@ if __name__ == "__main__":
     # pca_explained_variance_ratio = np.insert(pca.explained_variance_ratio_[0:8], 0, 0)
     # plot_explained_variance_ratio(pca_explained_variance_ratio, "figures/pca_explained_variance")
     # print("Done")
-    #
+
     # # Plot the explained variance ratio of LDA
     # print("Plot the explained variance ratio of LDA ... ", end="")
     # lda = LinearDiscriminantAnalysis()
@@ -98,33 +118,8 @@ if __name__ == "__main__":
     # print("Feature 1: ", counts[0], "Feature 2: ", counts[1], "Feature 3: ", counts[2])
 
     # Generate confusion matrix for subcategory classification with decision tree using original features
-    X_train, X_test, y_train, y_test = train_test_split(X, subcategory_labels, test_size=0.2)
-    cart = DecisionTreeClassifier(splitter="random")
-    cart.fit(X_train, y_train)
-    y_pred = cart.predict(X_test)
-    mat = confusion_matrix(y_test, y_pred)
-    print(mat)
-    print("Accuracy of the classifier: ", np.trace(mat) / np.sum(mat) * 100)
-    mat = mat / mat.sum(axis=1)[:, np.newaxis] * 100
-    plt.figure(figsize=(16, 9), dpi=120)
-    plt.matshow(mat, cmap="Blues")
-    plt.colorbar()
-    plt.savefig("figures/confusion_matrix_original.pdf", format="pdf", dpi=120)
-    plt.savefig("figures/confusion_matrix_original.jpg", format="jpg", dpi=120)
+    generate_confusion_matrix(X, subcategory_labels, "figures/confusion_matrix_original")
 
     # Generate confusion matrix for subcategory classification with decision tree using UMAP 3 dimensions data
     umap_features = np.load("data/umap3.npy", allow_pickle=True)
-    X_train, X_test, y_train, y_test = train_test_split(umap_features, subcategory_labels, test_size=0.2)
-    cart = DecisionTreeClassifier(splitter="random")
-    cart.fit(X_train, y_train)
-    y_pred = cart.predict(X_test)
-    mat = confusion_matrix(y_test, y_pred)
-    print(mat)
-    print("Accuracy of the classifier: ", np.trace(mat) / np.sum(mat) * 100)
-    mat = mat / mat.sum(axis=1)[:, np.newaxis] * 100
-    plt.figure(figsize=(16, 9), dpi=120)
-    plt.matshow(mat, cmap="Blues")
-    plt.colorbar()
-    plt.savefig("figures/confusion_matrix_umap.pdf", format="pdf", dpi=120)
-    plt.savefig("figures/confusion_matrix_umap.jpg", format="jpg", dpi=120)
-
+    generate_confusion_matrix(umap_features, subcategory_labels, "figures/confusion_matrix_umap")
